@@ -1,0 +1,542 @@
+// Pessoa.java
+package cadastrobd.model;
+
+public class Pessoa {
+    private int id;
+    private String nome;
+    private String logradouro;
+    private String cidade;
+    private String estado;
+    private String telefone;
+    private String email;
+
+    public Pessoa() {}
+
+    public Pessoa(int id, String nome, String logradouro, String cidade, String estado, String telefone, String email) {
+        this.id = id;
+        this.nome = nome;
+        this.logradouro = logradouro;
+        this.cidade = cidade;
+        this.estado = estado;
+        this.telefone = telefone;
+        this.email = email;
+    }
+
+    public void exibir() {
+        System.out.println("ID: " + id + ", Nome: " + nome + ", Logradouro: " + logradouro + ", Cidade: " + cidade +
+                           ", Estado: " + estado + ", Telefone: " + telefone + ", Email: " + email);
+    }
+
+    // Getters and setters omitted for brevity
+}
+
+// PessoaFisica.java
+package cadastrobd.model;
+
+public class PessoaFisica extends Pessoa {
+    private String cpf;
+
+    public PessoaFisica() {}
+
+    public PessoaFisica(int id, String nome, String logradouro, String cidade, String estado, String telefone, String email, String cpf) {
+        super(id, nome, logradouro, cidade, estado, telefone, email);
+        this.cpf = cpf;
+    }
+
+    @Override
+    public void exibir() {
+        super.exibir();
+        System.out.println("CPF: " + cpf);
+    }
+
+    // Getters and setters omitted for brevity
+}
+
+// PessoaJuridica.java
+package cadastrobd.model;
+
+public class PessoaJuridica extends Pessoa {
+    private String cnpj;
+
+    public PessoaJuridica() {}
+
+    public PessoaJuridica(int id, String nome, String logradouro, String cidade, String estado, String telefone, String email, String cnpj) {
+        super(id, nome, logradouro, cidade, estado, telefone, email);
+        this.cnpj = cnpj;
+    }
+
+    @Override
+    public void exibir() {
+        super.exibir();
+        System.out.println("CNPJ: " + cnpj);
+    }
+
+    // Getters and setters omitted for brevity
+}
+
+// ConectorBD.java
+package cadastrobd.model.util;
+
+import java.sql.*;
+
+public class ConectorBD {
+    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=loja;encrypt=true;trustServerCertificate=true";
+    private static final String USER = "sa"; // substitute with your SQL Server username
+    private static final String PASSWORD = "your_password"; // substitute with your SQL Server password
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    public static PreparedStatement getPrepared(Connection conn, String sql) throws SQLException {
+        return conn.prepareStatement(sql);
+    }
+
+    public static ResultSet getSelect(PreparedStatement stmt) throws SQLException {
+        return stmt.executeQuery();
+    }
+
+    public static void close(Connection conn) {
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void close(Statement stmt) {
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void close(ResultSet rs) {
+        if (rs != null) {
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+// SequenceManager.java
+package cadastrobd.model.util;
+
+import java.sql.*;
+
+public class SequenceManager {
+    public static int getValue(String sequenceName) throws SQLException {
+        String sql = "SELECT NEXT VALUE FOR " + sequenceName + " AS seq_value";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql);
+             ResultSet rs = ConectorBD.getSelect(stmt)) {
+            if (rs.next()) {
+                return rs.getInt("seq_value");
+            }
+        }
+        throw new SQLException("Unable to get sequence value for: " + sequenceName);
+    }
+}
+
+// PessoaFisicaDAO.java
+package cadastrobd.model;
+
+import cadastrobd.model.util.ConectorBD;
+import cadastrobd.model.util.SequenceManager;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PessoaFisicaDAO {
+    public PessoaFisica getPessoa(int id) throws SQLException {
+        String sql = "SELECT * FROM PessoaFisica WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = ConectorBD.getSelect(stmt)) {
+                if (rs.next()) {
+                    return new PessoaFisica(rs.getInt("id"), rs.getString("nome"), rs.getString("logradouro"), 
+                        rs.getString("cidade"), rs.getString("estado"), rs.getString("telefone"), 
+                        rs.getString("email"), rs.getString("cpf"));
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<PessoaFisica> getPessoas() throws SQLException {
+        List<PessoaFisica> pessoas = new ArrayList<>();
+        String sql = "SELECT * FROM PessoaFisica";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql);
+             ResultSet rs = ConectorBD.getSelect(stmt)) {
+            while (rs.next()) {
+                pessoas.add(new PessoaFisica(rs.getInt("id"), rs.getString("nome"), rs.getString("logradouro"), 
+                    rs.getString("cidade"), rs.getString("estado"), rs.getString("telefone"), 
+                    rs.getString("email"), rs.getString("cpf")));
+            }
+        }
+        return pessoas;
+    }
+
+    public void incluir(PessoaFisica pessoa) throws SQLException {
+        int id = SequenceManager.getValue("PessoaFisicaSeq");
+        String sql = "INSERT INTO Pessoa (id, nome, logradouro, cidade, estado, telefone, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.setString(2, pessoa.getNome());
+            stmt.setString(3, pessoa.getLogradouro());
+            stmt.setString(4, pessoa.getCidade());
+            stmt.setString(5, pessoa.getEstado());
+            stmt.setString(6, pessoa.getTelefone());
+            stmt.setString(7, pessoa.getEmail());
+            stmt.executeUpdate();
+        }
+
+        sql = "INSERT INTO PessoaFisica (id, cpf) VALUES (?, ?)";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.setString(2, pessoa.getCpf());
+            stmt.executeUpdate();
+        }
+    }
+
+    public void alterar(PessoaFisica pessoa) throws SQLException {
+        String sql = "UPDATE Pessoa SET nome = ?, logradouro = ?, cidade = ?, estado = ?, telefone = ?, email = ? WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setString(1, pessoa.getNome());
+            stmt.setString(2, pessoa.getLogradouro());
+            stmt.setString(3, pessoa.getCidade());
+            stmt.setString(4, pessoa.getEstado());
+            stmt.setString(5, pessoa.getTelefone());
+            stmt.setString(6, pessoa.getEmail());
+            stmt.setInt(7, pessoa.getId());
+            stmt.executeUpdate();
+        }
+
+        sql = "UPDATE PessoaFisica SET cpf = ? WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setString(1, pessoa.getCpf());
+            stmt.setInt(2, pessoa.getId());
+            stmt.executeUpdate();
+        }
+    }
+
+    public void excluir(int id) throws SQLException {
+        String sql = "DELETE FROM PessoaFisica WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+
+        sql = "DELETE FROM Pessoa WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
+}
+
+// PessoaJuridicaDAO.java
+package cadastrobd.model;
+
+import cadastrobd.model.util.ConectorBD;
+import cadastrobd.model.util.SequenceManager;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PessoaJuridicaDAO {
+    public PessoaJuridica getPessoa(int id) throws SQLException {
+        String sql = "SELECT * FROM PessoaJuridica WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = ConectorBD.getSelect(stmt)) {
+                if (rs.next()) {
+                    return new PessoaJuridica(rs.getInt("id"), rs.getString("nome"), rs.getString("logradouro"), 
+                        rs.getString("cidade"), rs.getString("estado"), rs.getString("telefone"), 
+                        rs.getString("email"), rs.getString("cnpj"));
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<PessoaJuridica> getPessoas() throws SQLException {
+        List<PessoaJuridica> pessoas = new ArrayList<>();
+        String sql = "SELECT * FROM PessoaJuridica";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql);
+             ResultSet rs = ConectorBD.getSelect(stmt)) {
+            while (rs.next()) {
+                pessoas.add(new PessoaJuridica(rs.getInt("id"), rs.getString("nome"), rs.getString("logradouro"), 
+                    rs.getString("cidade"), rs.getString("estado"), rs.getString("telefone"), 
+                    rs.getString("email"), rs.getString("cnpj")));
+            }
+        }
+        return pessoas;
+    }
+
+    public void incluir(PessoaJuridica pessoa) throws SQLException {
+        int id = SequenceManager.getValue("PessoaJuridicaSeq");
+        String sql = "INSERT INTO Pessoa (id, nome, logradouro, cidade, estado, telefone, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.setString(2, pessoa.getNome());
+            stmt.setString(3, pessoa.getLogradouro());
+            stmt.setString(4, pessoa.getCidade());
+            stmt.setString(5, pessoa.getEstado());
+            stmt.setString(6, pessoa.getTelefone());
+            stmt.setString(7, pessoa.getEmail());
+            stmt.executeUpdate();
+        }
+
+        sql = "INSERT INTO PessoaJuridica (id, cnpj) VALUES (?, ?)";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.setString(2, pessoa.getCnpj());
+            stmt.executeUpdate();
+        }
+    }
+
+    public void alterar(PessoaJuridica pessoa) throws SQLException {
+        String sql = "UPDATE Pessoa SET nome = ?, logradouro = ?, cidade = ?, estado = ?, telefone = ?, email = ? WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setString(1, pessoa.getNome());
+            stmt.setString(2, pessoa.getLogradouro());
+            stmt.setString(3, pessoa.getCidade());
+            stmt.setString(4, pessoa.getEstado());
+            stmt.setString(5, pessoa.getTelefone());
+            stmt.setString(6, pessoa.getEmail());
+            stmt.setInt(7, pessoa.getId());
+            stmt.executeUpdate();
+        }
+
+        sql = "UPDATE PessoaJuridica SET cnpj = ? WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setString(1, pessoa.getCnpj());
+            stmt.setInt(2, pessoa.getId());
+            stmt.executeUpdate();
+        }
+    }
+
+    public void excluir(int id) throws SQLException {
+        String sql = "DELETE FROM PessoaJuridica WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+
+        sql = "DELETE FROM Pessoa WHERE id = ?";
+        try (Connection conn = ConectorBD.getConnection();
+             PreparedStatement stmt = ConectorBD.getPrepared(conn, sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
+}
+
+// CadastroBDTeste.java
+package cadastrobd;
+
+import cadastrobd.model.*;
+import java.sql.SQLException;
+import java.util.List;
+
+public class CadastroBDTeste {
+    public static void main(String[] args) {
+        PessoaFisicaDAO pfDao = new PessoaFisicaDAO();
+        PessoaJuridicaDAO pjDao = new PessoaJuridicaDAO();
+
+        try {
+            // Instanciar pessoa física
+            PessoaFisica pf = new PessoaFisica(1, "João", "Rua A", "Cidade B", "Estado C", "123456789", "joao@example.com", "123.456.789-00");
+            pfDao.incluir(pf);
+            System.out.println("Pessoa Física incluída");
+
+            // Alterar pessoa física
+            pf.setNome("João Alterado");
+            pfDao.alterar(pf);
+            System.out.println("Pessoa Física alterada");
+
+            // Consultar todas as pessoas físicas
+            List<PessoaFisica> pessoasFisicas = pfDao.getPessoas();
+            for (PessoaFisica p : pessoasFisicas) {
+                p.exibir();
+            }
+
+            // Excluir pessoa física
+            pfDao.excluir(pf.getId());
+            System.out.println("Pessoa Física excluída");
+
+            // Instanciar pessoa jurídica
+            PessoaJuridica pj = new PessoaJuridica(1, "Empresa X", "Rua Y", "Cidade Z", "Estado W", "987654321", "empresa@example.com", "12.345.678/0001-00");
+            pjDao.incluir(pj);
+            System.out.println("Pessoa Jurídica incluída");
+
+            // Alterar pessoa jurídica
+            pj.setNome("Empresa X Alterada");
+            pjDao.alterar(pj);
+            System.out.println("Pessoa Jurídica alterada");
+
+            // Consultar todas as pessoas jurídicas
+            List<PessoaJuridica> pessoasJuridicas = pjDao.getPessoas();
+            for (PessoaJuridica p : pessoasJuridicas) {
+                p.exibir();
+            }
+
+            // Excluir pessoa jurídica
+            pjDao.excluir(pj.getId());
+            System.out.println("Pessoa Jurídica excluída");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+package cadastrobd;
+
+import cadastrobd.model.*;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Scanner;
+
+public class CadastroBDTeste {
+    public static void main(String[] args) {
+        PessoaFisicaDAO pfDao = new PessoaFisicaDAO();
+        PessoaJuridicaDAO pjDao = new PessoaJuridicaDAO();
+
+        Scanner scanner = new Scanner(System.in);
+
+        int opcao = -1;
+        while (opcao != 0) {
+            System.out.println("\n### Menu de Opções ###");
+            System.out.println("1 - Incluir");
+            System.out.println("2 - Alterar");
+            System.out.println("3 - Excluir");
+            System.out.println("4 - Exibir pelo ID");
+            System.out.println("5 - Exibir todos");
+            System.out.println("0 - Sair");
+            System.out.print("Escolha uma opção: ");
+            opcao = scanner.nextInt();
+            scanner.nextLine(); // limpar o buffer do teclado
+
+            switch (opcao) {
+                case 1:
+                    incluir(scanner, pfDao, pjDao);
+                    break;
+                case 2:
+                    alterar(scanner, pfDao, pjDao);
+                    break;
+                case 3:
+                    excluir(scanner, pfDao, pjDao);
+                    break;
+                case 4:
+                    obterPorId(scanner, pfDao, pjDao);
+                    break;
+                case 5:
+                    obterTodos(scanner, pfDao, pjDao);
+                    break;
+                case 0:
+                    System.out.println("Encerrando o programa...");
+                    break;
+                default:
+                    System.out.println("Opção inválida, por favor escolha novamente.");
+            }
+        }
+
+        scanner.close();
+    }
+
+    private static void incluir(Scanner scanner, PessoaFisicaDAO pfDao, PessoaJuridicaDAO pjDao) {
+        System.out.println("\n### Inclusão de Pessoa ###");
+        System.out.println("Escolha o tipo de pessoa:");
+        System.out.println("1 - Pessoa Física");
+        System.out.println("2 - Pessoa Jurídica");
+        System.out.print("Escolha uma opção: ");
+        int tipo = scanner.nextInt();
+        scanner.nextLine(); // limpar o buffer do teclado
+
+        if (tipo == 1) {
+            // Inclusão de Pessoa Física
+            System.out.println("\n### Inclusão de Pessoa Física ###");
+            // Receber dados da pessoa física do usuário
+            System.out.print("Nome: ");
+            String nome = scanner.nextLine();
+            // Receber outros dados...
+
+            // Criar objeto PessoaFisica com os dados recebidos
+            PessoaFisica pf = new PessoaFisica();
+            // Preencher os dados...
+
+            try {
+                // Incluir no banco de dados
+                pfDao.incluir(pf);
+                System.out.println("Pessoa Física incluída com sucesso!");
+            } catch (SQLException e) {
+                System.out.println("Erro ao incluir Pessoa Física: " + e.getMessage());
+            }
+        } else if (tipo == 2) {
+            // Inclusão de Pessoa Jurídica
+            System.out.println("\n### Inclusão de Pessoa Jurídica ###");
+            // Receber dados da pessoa jurídica do usuário
+            System.out.print("Nome: ");
+            String nome = scanner.nextLine();
+            // Receber outros dados...
+
+            // Criar objeto PessoaJuridica com os dados recebidos
+            PessoaJuridica pj = new PessoaJuridica();
+            // Preencher os dados...
+
+            try {
+                // Incluir no banco de dados
+                pjDao.incluir(pj);
+                System.out.println("Pessoa Jurídica incluída com sucesso!");
+            } catch (SQLException e) {
+                System.out.println("Erro ao incluir Pessoa Jurídica: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Opção inválida.");
+        }
+    }
+
+    private static void alterar(Scanner scanner, PessoaFisicaDAO pfDao, PessoaJuridicaDAO pjDao) {
+        // Implementar método para alterar dados
+    }
+
+    private static void excluir(Scanner scanner, PessoaFisicaDAO pfDao, PessoaJuridicaDAO pjDao) {
+        // Implementar método para excluir dados
+    }
+
+    private static void obterPorId(Scanner scanner, PessoaFisicaDAO pfDao, PessoaJuridicaDAO pjDao) {
+        // Implementar método para obter dados por ID
+    }
+
+    private static void obterTodos(Scanner scanner, PessoaFisicaDAO pfDao, PessoaJuridicaDAO pjDao) {
+        // Implementar método para obter todos os dados
+    }
+}
+
