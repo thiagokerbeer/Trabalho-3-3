@@ -1,0 +1,29 @@
+
+Claro, aqui está um exemplo de relatório escrito sobre o código, seguindo os padrões que você indicou:
+
+Relatório sobre o Projeto CadastroBD
+
+Introdução
+
+O projeto CadastroBD consiste em um aplicativo Java desenvolvido para realizar operações de cadastro em um banco de dados SQL Server utilizando o middleware JDBC. O objetivo principal é demonstrar o uso do padrão DAO (Data Access Object) para manipulação de dados e mapeamento objeto-relacional em sistemas Java. O projeto permite a criação e manipulação de entidades de pessoa física e pessoa jurídica, com persistência dos dados no banco de dados.
+
+Desenvolvimento
+
+O projeto foi desenvolvido em Java utilizando a IDE NetBeans e o JDK. A estrutura do projeto foi organizada em pacotes para separação de responsabilidades, seguindo boas práticas de programação. Foram utilizadas classes DAO para cada entidade do banco de dados, garantindo uma separação clara entre a lógica de negócios e a manipulação de dados.
+
+Funcionalidades Implementadas
+
+O aplicativo possui um menu interativo que permite ao usuário escolher entre diversas opções de operações de cadastro. As principais funcionalidades implementadas são:
+
+Incluir Pessoa: Permite a inclusão de uma pessoa física ou jurídica no banco de dados. O usuário pode escolher o tipo de pessoa e inserir os dados necessários.
+Alterar Pessoa: Permite a alteração dos dados de uma pessoa física ou jurídica já cadastrada no banco de dados. O usuário pode selecionar o tipo de pessoa e fornecer o ID da entidade a ser alterada.
+Excluir Pessoa: Permite a exclusão de uma pessoa física ou jurídica do banco de dados. O usuário pode selecionar o tipo de pessoa e fornecer o ID da entidade a ser excluída.
+Exibir Pessoa pelo ID: Permite a visualização dos dados de uma pessoa física ou jurídica específica, fornecendo o ID como parâmetro.
+Exibir Todas as Pessoas: Permite a visualização de todos os registros de pessoas físicas ou jurídicas presentes no banco de dados.
+Testes Realizados
+
+Foram realizados testes das funcionalidades do aplicativo para garantir o correto funcionamento. As operações de inclusão, alteração, exclusão e consulta foram testadas para ambos os tipos de pessoa (física e jurídica). Após cada operação, os dados foram verificados no banco de dados para garantir a consistência das informações.
+
+Conclusão
+
+O projeto CadastroBD demonstra de forma clara e eficiente o uso do padrão DAO e o mapeamento objeto-relacional em sistemas Java. As funcionalidades implementadas permitem uma interação intuitiva com o banco de dados, facilitando a realização de operações de cadastro de pessoas físicas e jurídicas. O código foi desenvolvido seguindo boas práticas de programação e está organizado de forma a facilitar a manutenção e a evolução do sistema.
